@@ -150,7 +150,7 @@ inline float Do_Allpass2(float inSample)
     return readback;
 }
 
-void IRAM_ATTR Reverb_Process(float *signal_l, float *signal_r, int buffLen)
+void Reverb_Process(float *signal_l, float *signal_r, int buffLen)
 {
     float inSample;
 

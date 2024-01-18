@@ -300,7 +300,7 @@ int16_t bend;
 
     // value from -2 to +2 semitones
     float value = ((float)bend - 8192.0f) * (0.5f / 8192.0f) - 0.5f;
-    value *=GlobalPB;      
+    value *=WS.PBRange;      
     pitchMultiplier = pow(2.0f, value / 12.0f);
 
     //Serial.printf("Lsb %02x Msb %02x Bend %d Value %3.2f Pitch mul %3.2f\n",data1,data2,bend,value,pitchMultiplier);
@@ -400,7 +400,7 @@ static uint8_t incdecval=0;
         }
         if(data1==0x26)                          // Value LSB
         {
-            newval =Synth_SetRotary(RelCC,data2);
+            newval = data2;
             BoolNewVal=1;
         }
         if(data1==0x60)                          // Inc Value
@@ -567,16 +567,16 @@ inline void HandleShortMsg(uint8_t *data)
         case 0x90:
             if (data[2] > 0)
             {
-                Midi_NoteOn(data[1]+GlobalTranspose,data[2]);
+                Midi_NoteOn(data[1]+WS.Transpose,data[2]);
             }
             else
             {
-                Midi_NoteOff(data[1]+GlobalTranspose,data[2]);
+                Midi_NoteOff(data[1]+WS.Transpose,data[2]);
             }
             break;
         /* note off */
         case 0x80:
-            Midi_NoteOff(data[1]+GlobalTranspose,data[2]);
+            Midi_NoteOff(data[1]+WS.Transpose,data[2]);
             break;
         /* Midi control change */
         case 0xb0:

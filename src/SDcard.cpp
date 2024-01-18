@@ -4,7 +4,7 @@
 
 #include "typdedef.h"
 #include "easysynth.h"
-#include "Ihm.h"
+#include "ihm.h"
 #include "simple_delay.h"
 
 #include "Nextion.h"
@@ -253,36 +253,11 @@ void SDCard_SaveSound(uint8_t snd)
 char path[30];
 uint16_t wr;
 unsigned int sz=sizeof(WorkSound);
-
-    for(uint8_t s=0;s<MAX_SECTION;s++)
-    {
-        if(s != SECTION_MIDI)
-        {
-            for(uint8_t e=0;e<MAX_ENCODER;e++)
-            {
-                *Tab_Encoder[s][e].Data = fstoval(*Tab_Encoder[s][e].Data,Tab_Encoder[s][e].MinData,Tab_Encoder[s][e].MaxData,127);
-            }
-        }
-    }
-
-
     sprintf(path,"/sound/%d.snd",snd);
     File file = SD_MMC.open(path,"wb");
     wr=file.write((uint8_t*)&WS,sz);
     file.close();
     Serial.printf("Save sound %d\n",snd);
-
-    for(uint8_t s=0;s<MAX_SECTION;s++)
-    {
-        if(s != SECTION_MIDI)
-        {
-            for(uint8_t e=0;e<MAX_ENCODER;e++)
-            {
-                *Tab_Encoder[s][e].Data= valtofs(*Tab_Encoder[s][e].Data,Tab_Encoder[s][e].MinData,Tab_Encoder[s][e].MaxData,127);
-            }
-        }
-    }
-
 }
 
 /***************************************************/
@@ -292,11 +267,12 @@ unsigned int sz=sizeof(WorkSound);
 /***************************************************/
 void SDCard_LoadSound(uint8_t snd,uint8_t source)
 {
-uint16_t wr;
 char path[30];
+uint16_t wr;
 unsigned int sz=sizeof(WorkSound);
+uint8_t range;
+float factor; 
 int val;   
-int valrd;
 
     Delay_Reset();
 
@@ -314,7 +290,7 @@ int valrd;
     oldCurrentSound = CurrentSound; 
 
     // Set the page
-    //SDCard_Display10SndName();
+    SDCard_Display10SndName();
 
     sprintf(path,"/sound/%d.snd",snd);
     File file = SD_MMC.open(path,"rb");
@@ -325,21 +301,21 @@ int valrd;
     IsLoadSound = 1;
     for(uint8_t s=0;s<MAX_SECTION;s++)
     {
-        if(s != SECTION_MIDI)
+        for(uint8_t e=0;e<MAX_ENCODER;e++)
         {
-            for(uint8_t e=0;e<MAX_ENCODER;e++)
+            val = *Tab_Encoder[s][e].Data;
+            if(Tab_Encoder[s][e].Type==TYPE_LIST)
             {
-                // Read the absolut value  -24 to 24 for transpose
-                val = *Tab_Encoder[s][e].Data;
-                if(Tab_Encoder[s][e].Type==TYPE_DATA)
-                {
-                    valrd = *Tab_Encoder[s][e].Data;
-                    *Tab_Encoder[s][e].Data= valtofs(*Tab_Encoder[s][e].Data,Tab_Encoder[s][e].MinData,Tab_Encoder[s][e].MaxData,127);
-                    val = fstoval(*Tab_Encoder[s][e].Data,Tab_Encoder[s][e].MinData,Tab_Encoder[s][e].MaxData,127);
-                    //Serial.printf("S %02d E %02d Min %04d Max %04d Read %04d Fs %04d Val %04d\r\n",s,e,Tab_Encoder[s][e].MinData,Tab_Encoder[s][e].MaxData,valrd,*Tab_Encoder[s][e].Data,val);
-                }
-                Tab_Encoder[s][e].ptrfunctValueChange(val);
             }
+            else
+            {
+                range = Tab_Encoder[s][e].MaxData-Tab_Encoder[s][e].MinData;
+                factor = (float)range/127;
+                val = Tab_Encoder[s][e].MinData + (int)((float)val*factor);
+            }
+            Tab_Encoder[s][e].ptrfunctValueChange(val);
+            //Tab_Encoder[s][e].ptrfunctValueChange((int)*Tab_Encoder[s][e].Data);
+            
         }
     }
     IsLoadSound = 0;
@@ -406,9 +382,6 @@ void SDCard_SaveMidiRx()
     char path[30];
     uint16_t wr;
     // Write the Midirx in a file
-
-    MidiRx = fstoval(WSMidiRx,1,16,127);
-
     sprintf(path,"/System/midirx.cfg");
     File file = SD_MMC.open(path,"wb+");
     wr=file.write((uint8_t*)&MidiRx,1);
@@ -416,20 +389,7 @@ void SDCard_SaveMidiRx()
     wr=file.write((uint8_t*)&MidiRelCC,1);
     wr=file.write((uint8_t*)&MidiRelMin,1);        
     wr=file.write((uint8_t*)&MidiRelMax,1);
-    wr=file.write((uint8_t*)&IntAudioIn,1);
-    
-
     Serial.printf("Save file midirx.cfg\n");
-
-    /*
-    Serial.printf("Midi Rx is      %d\n",MidiRx);
-    Serial.printf("Midi Mode is    %d\n",MidiMode);
-    Serial.printf("Midi Rel CC is  %d\n",MidiRelCC);
-    Serial.printf("Midi Rel Min is %d\n",MidiRelMin);
-    Serial.printf("Midi Rel Max is %d\n",MidiRelMax);
-    Serial.printf("Audio In is     %d\n",IntAudioIn);
-    */
-
     file.close();   
 }
 
@@ -440,9 +400,6 @@ void SDCard_SaveMidiRx()
 /***************************************************/
 void SDCard_LoadMidiRx()
 {
-int val;   
-int valrd;
-
     char path[30];
     uint16_t rd;
     // Read the Midirx in a file
@@ -453,13 +410,7 @@ int valrd;
     rd=file.read((uint8_t*)&MidiRelCC,1);
     rd=file.read((uint8_t*)&MidiRelMin,1);        
     rd=file.read((uint8_t*)&MidiRelMax,1);
-
-    rd=file.read((uint8_t*)&IntAudioIn,1);
-
-    WSMidiRx = valtofs(MidiRx,1,16,127);
-
     Serial.printf("Load file midirx.cfg\n");
-    Fct_Ch_AudioIn(IntAudioIn);
 
     float temp;
     temp=((float)MidiMode/127)*MIDI_MODE_MAX;
@@ -519,7 +470,7 @@ uint8_t* ptname;
 
     ptname = tabname+s*SDCARD_NAME_SIZE;
     memcpy(ptname,SndName,SDCARD_NAME_SIZE);
-    Serial.printf("New Name %s\r\n",SndName);
+    Serial.printf("New Name %s",SndName);
 
 }
 

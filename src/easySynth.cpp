@@ -19,7 +19,7 @@
 #include "Lfo.h"
 #include "AC101.h"
 #include "Ihm.h"
-#include "reverb.h"
+#include "Reverb.h"
 #include "Nextion.h"
 #include "Modulator.h"
 
@@ -496,7 +496,7 @@ uint8_t oldnote;
             if (voicePlayer[i].active)
             {
                 osc = &oscPlayer[2+i*3];                // 2 -> The thirth OSC is the sub
-                note = voicePlayer[i].midiNote+GlobalTranspose;
+                note = voicePlayer[i].midiNote+WS.Transpose;
                 osc->addVal = midi_note_to_add[note+(int8_t)SubTranspose]*(1.0+subdetune*0.9);
             }
         }        
@@ -507,7 +507,7 @@ uint8_t oldnote;
             if (voicePlayer[v].active)
             {
                 note = voicePlayer[v].midiNote;
-                voicePlayer[v].midiNote=note+GlobalTranspose;
+                voicePlayer[v].midiNote=note+WS.Transpose;
                 // Detune OSC1
                 osc = &oscPlayer[v*3+0];
                 tmp= midi_note_to_add[note]*(1.0+oscdetune);
@@ -527,7 +527,7 @@ uint8_t oldnote;
         {
             if (voicePlayer[v].active)
             {
-                note = voicePlayer[v].midiNote+GlobalTranspose;
+                note = voicePlayer[v].midiNote+WS.Transpose;
                 // Detune OSC1
                 osc = &oscPlayer[v*3+0];
                 tmp= midi_note_to_add[note]*(1.0+oscdetune);
@@ -1502,10 +1502,10 @@ float factor;
     else
     {
     
-        range = Tab_Encoder[s][e].MaxData-Tab_Encoder[s][e].MinData;    
-        factor = (float)range/127;                                      
-        val = Tab_Encoder[s][e].MinData + (int)((float)val*factor);     
-        Serial.printf("New2 %d\n",val);
+        range = Tab_Encoder[s][e].MaxData-Tab_Encoder[s][e].MinData;
+        factor = (float)range/127;
+        val = Tab_Encoder[s][e].MinData + (int)((float)val*factor);
+        //Serial.printf("New2 %d\n",val);
     }
     Tab_Encoder[s][e].ptrfunctValueChange(val);
     return(val);

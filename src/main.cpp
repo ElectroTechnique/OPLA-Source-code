@@ -10,7 +10,7 @@
 //--------------------------------------------------------------------------
 
 
-#include <Arduino.h>
+#include <arduino.h>
 #include "typdedef.h"
 
 //#include "AudioFileSourcePROGMEM.h"
@@ -36,11 +36,10 @@
 #include "Nextion.h"
 #include "Lfo.h"
 #include "SDCard.h"
-#include "simple_delay.h"
-#include "reverb.h"
+#include "Simple_Delay.h"
+#include "Reverb.h"
 #include "Ihm.h"
 #include "ArpSeq.h"
-#include "Distortion.h"
 
 #define __CODEC__
 #include "Codec.h"
@@ -233,7 +232,7 @@ void setup()
  {
      
 char AffCodec[15]="Not Define";
-char AffVersion[30]="V16 060422";
+char AffVersion[30]="V15 130222";
                     
 
 
@@ -522,31 +521,11 @@ char AffVersion[30]="V16 060422";
     SDCard_LoadLastSound();
     SDCard_LoadMidiRx();
 
-    // Patch to init the ARP
-    /*
-    for(uint8_t sn=0;sn<100;sn++)
-    {
-        SDCard_LoadSound(sn,1);
-        *Tab_Encoder[SECTION_ARP][2].Data=100;
-        *Tab_Encoder[SECTION_ARP][3].Data=80;
-        *Tab_Encoder[SECTION_ARP][5].Data=0;
-        *Tab_Encoder[SECTION_ARP][6].Data=80;
-        *Tab_Encoder[SECTION_ARP][8].Data=0;
-        *Tab_Encoder[SECTION_ARP][9].Data=0;
-        SDCard_SaveSound(sn);
-    }
-    */
-
-    if(IntAudioIn>64)
-        ES8388_WriteReg(ES8388_DACCONTROL16,0x09);
-
-
     Serial.printf("Midi Rx is      %d\n",MidiRx);
     Serial.printf("Midi Mode is    %d\n",MidiMode);
     Serial.printf("Midi Rel CC is  %d\n",MidiRelCC);
     Serial.printf("Midi Rel Min is %d\n",MidiRelMin);
     Serial.printf("Midi Rel Max is %d\n",MidiRelMax);
-    Serial.printf("Audio In is     %d\n",IntAudioIn);
 
     SDCard_LoadBackDelay();
     Serial.printf("BackDelay is %d\n",BackDelay);
@@ -590,7 +569,6 @@ static uint8_t onetime;
 
     loop_count_u8++;
     overcpt++;
-    doubleclick++;
     Cptloadwave++;
 
     // ARP Wait xms to all key on 
@@ -706,35 +684,24 @@ static uint8_t onetime;
     sampleData32.sample[0] = (int16_t)(fl_sample*32768.0f);
     sampleData32.sample[1] = (int16_t)(fr_sample*32768.0f);
     */
-    if(!StopAudioOut)
+
+    if(i2s_write_sample_16ch2(sampleData32.sample32))
     {
-        if(i2s_write_sample_16ch2(sampleData32.sample32))
+        Synth_Process(&fl_sample, &fr_sample);
+        
+        if(SoundMode!=SND_MODE_POLY)
         {
-            Synth_Process(&fl_sample, &fr_sample);
-            //Distortion(&fl_sample, &fr_sample);
-            if(SoundMode!=SND_MODE_POLY)
-            {
-                if(WS.DelayAmount==0)
-                Distortion(&fl_sample, &fr_sample);
-                else
+            if(WS.DelayAmount !=0)
                 Delay_Process(&fl_sample, &fr_sample);
-            }
-            else
-            {
-                Distortion(&fl_sample, &fr_sample);
-            }
-                
-            if(WS.ReverbLevel !=0)
-            {
-                Reverb_Process( &fl_sample, &fr_sample, SAMPLE_BUFFER_SIZE );       
-            }
-            sampleData32.sample[0] = (int16_t)(fl_sample*32768.0f);
-            sampleData32.sample[1] = (int16_t)(fr_sample*32768.0f);
         }
+        if(WS.ReverbLevel !=0)
+        {
+            Reverb_Process( &fl_sample, &fr_sample, SAMPLE_BUFFER_SIZE );       
+        }
+       
+        sampleData32.sample[0] = (int16_t)(fl_sample*32768.0f);
+        sampleData32.sample[1] = (int16_t)(fr_sample*32768.0f);
     }
-
-
-
 
     /*
      * Midi does not required to be checked after every processed sample
@@ -746,7 +713,7 @@ static uint8_t onetime;
         if(trigloadwave && Cptloadwave > LOADWAVE_MAX_OVER_TIME)
         {
             trigloadwave=false;
-            SDCard_LoadWave(gui_WaveBank+1,gui_WaveNumber+1);
+            SDCard_LoadWave(WS.OscBank+1,WS.AKWFWave+1);
             Nextion_Plot();
             Fct_Ch_WS1(WS.WaveShapping1);
         }

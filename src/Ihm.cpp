@@ -13,43 +13,9 @@
 #include "Nextion.h"
 #include "SDCard.h"
 #include "ArpSeq.h"
-#include "Distortion.h"
-#include "ES8388.h"
 
-uint8_t serialdebug=1;
+uint8_t serialdebug=0;
 extern uint8_t Midi_KeyOn;
-
-
-
-// value to full scale
-int16_t valtofs(int16_t val,int8_t min,int8_t max,int16_t fs)
-{
-	int16_t ret;
-	ret = val;
-	ret -= min;
-	ret *=fs;
-	ret /= (max-min);
-	// Place the new val just under the next value
-	ret +=fs/(max-min);
-	ret--;
-	return(ret);
-}
-
-// full scale to value
-int16_t fstoval(int16_t val,int8_t min,int8_t max,int16_t fs)
-{
-	int16_t ret;
-
-	ret = val;
-	ret *=(max-min);
-	ret /=fs;
-	ret +=min;
-	return(ret);
-}
-
-
-
-
 //--------------------------------------------------
 // OSC
 //--------------------------------------------------
@@ -153,7 +119,6 @@ float value;
 /***************************************************/
 int Fct_Ch_Bank(int val) 
 {
-    gui_WaveBank = val;
     if(selWaveForm1!=WAVE_AKWF)
         return(0);
   
@@ -170,33 +135,32 @@ int Fct_Ch_Bank(int val)
     // No plot screen when load sound
     if(!IsLoadSound)
     {
-        sprintf(messnex,"page3.BK.txt=%c%03d%c",0x22,gui_WaveBank,0x22);
+        sprintf(messnex,"page3.BK.txt=%c%03d%c",0x22,WS.OscBank,0x22);
         Nextion_Send(messnex);
     }
    
-    sprintf(messnex,"page3.BKNAME.txt=%c%s%c",0x22,SampleDIR[gui_WaveBank].name,0x22);
+    sprintf(messnex,"page3.BKNAME.txt=%c%s%c",0x22,SampleDIR[WS.OscBank].name,0x22);
     Nextion_Send(messnex);      
-    Tab_Encoder[SECTION_BANK_MAX][POT_BANK_MAX].MaxData=SampleDIR[gui_WaveBank].nbr-1;  // Chg the max for the MIDI CC  
+    Tab_Encoder[SECTION_BANK_MAX][POT_BANK_MAX].MaxData=SampleDIR[WS.OscBank].nbr-1;  // Chg the max for the MIDI CC  
 
-    sprintf(messnex,"page3.WAPOT.maxval=%d",SampleDIR[gui_WaveBank].nbr-1);
+
+
+    sprintf(messnex,"page3.WAPOT.maxval=%d",SampleDIR[WS.OscBank].nbr-1);
     Nextion_Send(messnex);
 
     if(!IsLoadSound)
-    {
         WS.AKWFWave=0;
-        gui_WaveNumber=0;
-    }
 
-    sprintf(messnex,"page3.WAPOT.val=%d",gui_WaveNumber);
+    sprintf(messnex,"page3.WAPOT.val=%d",WS.AKWFWave);
     Nextion_Send(messnex);
-    sprintf(messnex,"page3.WA.txt=%c%03d%c",0x22,gui_WaveNumber,0x22);
+    sprintf(messnex,"page3.WA.txt=%c%03d%c",0x22,WS.AKWFWave,0x22);
     Nextion_Send(messnex);
 
-    sprintf(messnex,"page3.BKPOT.val=%d",gui_WaveBank);
+    sprintf(messnex,"page3.BKPOT.val=%d",WS.OscBank);
     Nextion_Send(messnex);
 
     if(serialdebug)
-        Serial.printf("BANK: %d Max %d MIDI CC %d\n", gui_WaveBank,Tab_Encoder[2][6].MaxData,Tab_Encoder[2][6].MidiCC);
+        Serial.printf("BANK: %d Max %d MIDI CC %d\n", WS.OscBank,Tab_Encoder[2][6].MaxData,Tab_Encoder[2][6].MidiCC);
 
     return(0);
 }
@@ -208,7 +172,6 @@ int Fct_Ch_Bank(int val)
 /***************************************************/
 int Fct_Ch_Wave(int val) 
 {
-    gui_WaveNumber=val;
     if(selWaveForm1!=WAVE_AKWF)
         return(0);
     if(!trigloadwave)
@@ -228,11 +191,11 @@ int Fct_Ch_Wave(int val)
         
     //}
     if(serialdebug)
-        Serial.printf("WAVE: %d\n",gui_WaveNumber);
+        Serial.printf("WAVE: %d\n", WS.AKWFWave);
 
-    sprintf(messnex,"page3.WAPOT.val=%d",gui_WaveNumber);
+    sprintf(messnex,"page3.WAPOT.val=%d",WS.AKWFWave);
     Nextion_Send(messnex);
-    sprintf(messnex,"page3.WA.txt=%c%03d%c",0x22,gui_WaveNumber,0x22);
+    sprintf(messnex,"page3.WA.txt=%c%03d%c",0x22,WS.AKWFWave,0x22);
     Nextion_Send(messnex);
 
     return(0);
@@ -1059,63 +1022,6 @@ float value;
     return(0);
 }
 
-/***************************************************/
-/*                                                 */
-/*                                                 */
-/*                                                 */
-/***************************************************/
-int Fct_Ch_Decimator(int val)
-{
-uint8_t range;
-float factor;   
-
-    Decimator = val;
-
-    if(serialdebug)       
-        Serial.printf("Decimator : %d\n",Decimator);
-    return(0);
-
-}
-
-/***************************************************/
-/*                                                 */
-/*                                                 */
-/*                                                 */
-/***************************************************/
-int Fct_Ch_WDDecimator(int val)
-{
-    if(serialdebug)       
-        Serial.printf("Decimator WD: %d\n",WS.WDDecimator);
-    return(0);
-}
-/***************************************************/
-/*                                                 */
-/*                                                 */
-/*                                                 */
-/***************************************************/
-int Fct_Ch_PanDecimator(int val)
-{
-    return(0);
-}
-
-/***************************************************/
-/*                                                 */
-/*                                                 */
-/*                                                 */
-/***************************************************/
-int Fct_Ch_Distortion(int val)
-{
-    /*
-    float dis;
-
-    dis = (float)WS.Distortion;
-    if(serialdebug)       
-        Serial.printf("Distortion %d %f\n",WS.Distortion,dis);
-    */
-    return(0);
-}
-
-
 
 /***************************************************/
 /*                                                 */
@@ -1160,9 +1066,11 @@ float value;
 /***************************************************/
 int Fct_Ch_PBRange(int val)
 {
-    GlobalPB = fstoval(WS.PBRange,0,12,127);
+float value;    
+
+    value = val * NORM127MUL;
     if(serialdebug)       
-        Serial.printf("PB Range: %d\n",GlobalPB);
+        Serial.printf("PB Range: %d\n",WS.PBRange);
     return(0);
 }
 
@@ -1236,10 +1144,7 @@ float value;
 int Fct_Ch_MidiRx(int val)
 {
     if(!IsLoadSound)
-    {
-        MidiRx = valtofs(WSMidiRx,1,16,127);
         SDCard_SaveMidiRx();
-    }
     if(serialdebug)       
         Serial.printf("MIDI RX: %d\n",MidiRx);    
     return(0);
@@ -1318,11 +1223,7 @@ float value;
 
     oscillatorT *osc;
     value = val * NORM127MUL;
-    GlobalTranspose = fstoval(WS.Transpose,-24,24,127);
     Update_Tune(TUNE_TRANSPOSE);
-    if(serialdebug)       
-        Serial.printf("Global Transpose: %d\n",GlobalTranspose);    
-
     return(0);
 }
 
@@ -1417,44 +1318,6 @@ int Fct_Ch_Calib(int val)
     {
         Nextion_Send("touch_j");
     }
-    return(0);
-}
-
-/***************************************************/
-/*                                                 */
-/*                                                 */
-/*                                                 */
-/***************************************************/
-int Fct_Ch_AudioIn(int val)
-{
-static uint8_t aud=0;
-uint8_t valr=0xDE;
-
-    StopAudioOut=1;
-    IntAudioIn=val;
-    if(val>64)
-    {
-        if(!aud)
-        {
-            ES8388_WriteReg(ES8388_DACCONTROL16,0x09);
-            SDCard_SaveMidiRx();
-            aud=1;
-        }
-    }
-    else
-    {
-        if(aud)
-        {
-            ES8388_WriteReg(ES8388_DACCONTROL16,0x00);
-            SDCard_SaveMidiRx();
-            aud=0;
-        }
-    }
-    if(serialdebug)       
-        Serial.printf("AUDIO IN: %d ON\n",IntAudioIn);  
-    StopAudioOut=0;
-    
-
     return(0);
 }
 
